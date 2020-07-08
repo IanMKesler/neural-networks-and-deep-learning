@@ -31,9 +31,9 @@ class Network(object):
         ever used in computing the outputs from later layers."""
         self.num_layers = len(sizes)
         self.sizes = sizes
-        self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
-        self.weights = [np.random.randn(y, x)
-                        for x, y in zip(sizes[:-1], sizes[1:])]
+        self.biases = np.array([np.random.randn(y, 1) for y in sizes[1:]])
+        self.weights = np.array([np.random.randn(y, x)
+                        for x, y in zip(sizes[:-1], sizes[1:])])
 
     def feedforward(self, a):
         """Return the output of the network if ``a`` is input."""
@@ -81,6 +81,28 @@ class Network(object):
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]
+        
+    def backpropm(self, mini_batch):
+        nabla_b = np.array([np.zeros(b.shape) for b in self.biases])
+        nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
+        # feedforward
+        activation = [] #create activation matrix
+        for x, y in mini_batch:
+            activation.append(x)
+        activation = np.transpose(activation)
+        activations = [] # list to store all the activations, layer by layer
+        zs = [] # list to store all the z matrices, layer by layer
+        for l in xrange(self.num_layers-1):
+            b = [] #create biase matrix
+            for i in xrange(len(mini_batch)):
+                b.append(self.biases[l])
+            z = self.weight[l]*activation + b
+            zs.append(z)
+            activation = sigmoid(z)
+            activations.append(activation)
+        # backward pass
+        
+        return None
 
     def backprop(self, x, y):
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
