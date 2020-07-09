@@ -73,34 +73,44 @@ class Network(object):
         is the learning rate."""
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
-        for x, y in mini_batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
-            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-            nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        delta_nabla_b, delta_nabla_w = self.backpropm(mini_batch)
+#        for x, y in mini_batch:
+#            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+#            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+#            nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
         self.weights = [w-(eta/len(mini_batch))*nw
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]
         
     def backpropm(self, mini_batch):
-        nabla_b = np.array([np.zeros(b.shape) for b in self.biases])
-        nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
+        nabla_b = []
+        nabla_w = [np.zeros(w.shape) for w in self.weights]
         # feedforward
         activation = [] #create activation matrix
-        for x, y in mini_batch:
+        output = [] #create output matrix
+        for x, y in mini_batch: #fill with input matrix
             activation.append(x)
+            output.append(y)
         activation = np.transpose(activation)
+        output = np.transpose(output)
         activations = [] # list to store all the activations, layer by layer
         zs = [] # list to store all the z matrices, layer by layer
         for l in xrange(self.num_layers-1):
             b = [] #create biase matrix
             for i in xrange(len(mini_batch)):
+                nabla_b.append([np.zeros(self.biases[l].shape)])
                 b.append(self.biases[l])
-            z = self.weight[l]*activation + b
+             
+            b = np.transpose(b)
+            z = np.matmul(self.weights[l], activation) + b
             zs.append(z)
             activation = sigmoid(z)
             activations.append(activation)
         # backward pass
+        delta = self.cost_derivative(activations[-1], output) * \
+            sigmoid_prime(zs[-1])
+        nabla_b[-1] = delta
         
         return None
 
