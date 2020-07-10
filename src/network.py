@@ -84,14 +84,18 @@ class Network(object):
                        for b, nb in zip(self.biases, nabla_b)]
         
     def backpropm(self, mini_batch):
+        n = len(mini_batch)
         nabla_b = []
-        nabla_w = [np.zeros(w.shape) for w in self.weights]
+        nabla_w = []
+        for b, w in zip(self.biases, self.weights): #construct nabla weights and biases arrays
+            nabla_b.append(np.zeros((b.shape[0], n)))
+            nabla_w.append(np.zeros((w.shape[0], w.shape[1], n)))
         # feedforward
         activation = [] #create activation matrix
         output = [] #create output matrix
         for x, y in mini_batch: #fill with input matrix
-            activation.append(x)
-            output.append(y)
+            activation.append(x[:,0])
+            output.append(y[:,0])
         activation = np.transpose(activation)
         output = np.transpose(output)
         activations = [] # list to store all the activations, layer by layer
@@ -99,9 +103,7 @@ class Network(object):
         for l in xrange(self.num_layers-1):
             b = [] #create biase matrix
             for i in xrange(len(mini_batch)):
-                nabla_b.append([np.zeros(self.biases[l].shape)])
-                b.append(self.biases[l])
-             
+                b.append(self.biases[l][:,0])
             b = np.transpose(b)
             z = np.matmul(self.weights[l], activation) + b
             zs.append(z)
@@ -111,8 +113,16 @@ class Network(object):
         delta = self.cost_derivative(activations[-1], output) * \
             sigmoid_prime(zs[-1])
         nabla_b[-1] = delta
-        
-        return None
+        d = np.expand_dims(delta, axis=1)
+        a = np.expand_dims(activations[-2], axis=1)
+        nabla_w[-1] = np.einsum('ijk,ljk->ilk', d, a) #suspect
+        for l in xrange(2, self.num_layers):
+            z = zs[-1]
+            sp = sigmoid_prime(z)
+            delta = np.matmul(self.weights[-l+1].transpose(), delta) * sp
+            nabla_b[-l] = delta
+            nabla_w[-l] = np.matmul(delta, activations[-l-1].transpose())
+        return (nabla_b, nabla_w)
 
     def backprop(self, x, y):
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
