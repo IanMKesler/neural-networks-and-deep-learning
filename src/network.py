@@ -41,7 +41,7 @@ class Network(object):
             a = sigmoid(np.dot(w, a)+b)
         return a
 
-    def SGD(self, training_data, epochs, mini_batch_size, eta,
+    def SGD(self, training_data, epochs, mini_batch_size, eta, matrix,
             test_data=None):
         """Train the neural network using mini-batch stochastic
         gradient descent.  The ``training_data`` is a list of tuples
@@ -59,25 +59,29 @@ class Network(object):
                 training_data[k:k+mini_batch_size]
                 for k in xrange(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
-                self.update_mini_batch(mini_batch, eta)
+                self.update_mini_batch(mini_batch, eta, matrix)
             if test_data:
                 print "Epoch {0}: {1} / {2}".format(
                     j, self.evaluate(test_data), n_test)
             else:
                 print "Epoch {0} complete".format(j)
 
-    def update_mini_batch(self, mini_batch, eta):
+    def update_mini_batch(self, mini_batch, eta, matrix):
         """Update the network's weights and biases by applying
         gradient descent using backpropagation to a single mini batch.
         The ``mini_batch`` is a list of tuples ``(x, y)``, and ``eta``
         is the learning rate."""
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
-        delta_nabla_b, delta_nabla_w = self.backpropm(mini_batch)
-#        for x, y in mini_batch:
-#            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
-#            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-#            nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        if matrix:
+            delta_nabla_b, delta_nabla_w = self.backpropm(mini_batch)
+            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+            nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        else:   
+            for x, y in mini_batch:
+                delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+                nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+                nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
         self.weights = [w-(eta/len(mini_batch))*nw
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
@@ -98,7 +102,7 @@ class Network(object):
             output.append(y[:,0])
         activation = np.transpose(activation)
         output = np.transpose(output)
-        activations = [] # list to store all the activations, layer by layer
+        activations = [activation] # list to store all the activations, layer by layer
         zs = [] # list to store all the z matrices, layer by layer
         for l in xrange(self.num_layers-1):
             b = [] #create biase matrix
@@ -117,11 +121,19 @@ class Network(object):
         a = np.expand_dims(activations[-2], axis=1)
         nabla_w[-1] = np.einsum('ijk,ljk->ilk', d, a) #suspect
         for l in xrange(2, self.num_layers):
-            z = zs[-1]
+            z = zs[-l]
             sp = sigmoid_prime(z)
             delta = np.matmul(self.weights[-l+1].transpose(), delta) * sp
             nabla_b[-l] = delta
-            nabla_w[-l] = np.matmul(delta, activations[-l-1].transpose())
+            d = np.expand_dims(delta, axis=1)
+            a = np.expand_dims(activations[-l-1], axis=1)
+            nabla_w[-l] = np.einsum('ijk,ljk->ilk', d, a) #suspect
+        # sum nablas over mini batch
+#        for nb, nw in zip(nabla_b, nabla_w):
+#            nb = np.add.reduce(nb, -1)
+#            nw = np.add.reduce(nw, -1) 
+        nabla_b = map(lambda x: np.expand_dims(np.add.reduce(x, -1), axis=1), nabla_b)
+        nabla_w = map(lambda x: np.add.reduce(x, -1), nabla_w)
         return (nabla_b, nabla_w)
 
     def backprop(self, x, y):

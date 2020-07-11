@@ -17,4 +17,5 @@ net = network.Network([784, 30, 10])
 epochs = 30
 batch_size = 10
 eta = 3.0
-net.SGD(training_data, epochs, batch_size, eta, test_data=test_data)
+matrix = False
+net.SGD(training_data, epochs, batch_size, eta, matrix, test_data=test_data)
